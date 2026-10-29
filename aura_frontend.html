@@ -1,0 +1,1414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>AURA-1 | Austere Trauma & PFC Triage UI</title>
+  <style>
+    :root {
+      --bg-oled: #000000;
+      --surface: #0d0d0d;
+      --surface-elevated: #161616;
+      --border-muted: #2e2e2e;
+      --text-primary: #ffffff;
+      --text-secondary: #c7c7c7;
+      --cat-a: #ff1744;
+      --cat-a-bg: #2b0008;
+      --cat-b: #ffab00;
+      --cat-b-bg: #291b00;
+      --cat-c: #00e676;
+      --cat-c-bg: #002411;
+      --cyan-voice: #00e5ff;
+      --cyan-bg: #002226;
+      --min-touch: 72px;
+      --gap: 14px;
+      --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    body {
+      background-color: var(--bg-oled);
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      overflow-x: hidden;
+    }
+
+    /* Mobile Device Frame (Full width on mobile, centered rugged frame on desktop) */
+    .app-shell {
+      width: 100%;
+      max-width: 500px;
+      min-height: 100vh;
+      background-color: var(--bg-oled);
+      border-left: 2px solid var(--border-muted);
+      border-right: 2px solid var(--border-muted);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+    }
+
+    /* 1. PERSISTENT TOP TELEMETRY HUD */
+    .telemetry-hud {
+      background-color: var(--surface);
+      border-bottom: 3px solid var(--border-muted);
+      padding: 10px 12px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      position: sticky;
+      top: 0;
+      z-index: 20;
+    }
+
+    .hud-pill {
+      font-family: var(--font-mono);
+      font-size: 0.88rem;
+      font-weight: 800;
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 2px solid var(--border-muted);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      letter-spacing: 0.02em;
+    }
+
+    .hud-cat-a {
+      border-color: var(--cat-a);
+      background-color: var(--cat-a-bg);
+      color: #ff8a9f;
+    }
+
+    .hud-cat-b {
+      border-color: var(--cat-b);
+      background-color: var(--cat-b-bg);
+      color: #ffd57e;
+    }
+
+    .hud-cat-c {
+      border-color: var(--cat-c);
+      background-color: var(--cat-c-bg);
+      color: #8affc1;
+    }
+
+    .shock-flash {
+      animation: pulse-red 1s infinite alternate;
+    }
+
+    @keyframes pulse-red {
+      from { background-color: var(--cat-a-bg); border-color: var(--cat-a); }
+      to { background-color: var(--cat-a); color: #000000; }
+    }
+
+    .hud-row-bottom {
+      grid-column: 1 / -1;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .tq-timer-box {
+      flex: 1;
+      font-family: var(--font-mono);
+      font-size: 0.92rem;
+      font-weight: 700;
+      padding: 8px 10px;
+      border-radius: 8px;
+      background-color: #141414;
+      border: 2px solid #444;
+      color: var(--text-primary);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .tq-active {
+      border-color: var(--cat-b);
+      color: var(--cat-b);
+    }
+
+    .hud-mini-btn {
+      background-color: var(--surface-elevated);
+      color: var(--cyan-voice);
+      border: 2px solid var(--cyan-voice);
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-weight: 800;
+      font-size: 0.8rem;
+      cursor: pointer;
+    }
+
+    .hud-mini-btn.off {
+      border-color: #555;
+      color: #888;
+    }
+
+    /* 2. ZERO-SCROLL TRIAGE VIEWPORT */
+    .triage-viewport {
+      flex: 1;
+      padding: 16px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .node-header-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      border-bottom: 1px solid #222;
+      padding-bottom: 6px;
+    }
+
+    .site-selector {
+      background: #141414;
+      color: #fff;
+      border: 2px solid #444;
+      border-radius: 6px;
+      padding: 4px 8px;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 0.82rem;
+    }
+
+    .warning-banner {
+      background-color: var(--cat-a-bg);
+      border: 3px solid var(--cat-a);
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-size: 1.05rem;
+      font-weight: 800;
+      line-height: 1.35;
+      color: #ffffff;
+    }
+
+    .triage-question {
+      font-size: 1.55rem;
+      font-weight: 900;
+      line-height: 1.25;
+      letter-spacing: -0.01em;
+      color: var(--text-primary);
+    }
+
+    .instruction-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .instruction-item {
+      background-color: var(--surface);
+      border: 2px solid #333;
+      border-left: 6px solid var(--cat-b);
+      border-radius: 10px;
+      padding: 12px;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      font-size: 1.12rem;
+      font-weight: 700;
+      line-height: 1.35;
+    }
+
+    .step-num {
+      background-color: var(--cat-b);
+      color: #000;
+      font-family: var(--font-mono);
+      font-weight: 900;
+      font-size: 1rem;
+      min-width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 2px;
+    }
+
+    /* Haptic & Audio 3-Minute Pressure Countdown Box */
+    .pressure-timer-card {
+      background-color: var(--cyan-bg);
+      border: 3px solid var(--cyan-voice);
+      border-radius: 12px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      align-items: center;
+      text-align: center;
+    }
+
+    .pressure-time-display {
+      font-family: var(--font-mono);
+      font-size: 2.2rem;
+      font-weight: 900;
+      color: var(--cyan-voice);
+    }
+
+    /* OVERSIZED 72DP DECISION BUTTONS */
+    .options-stack {
+      display: flex;
+      flex-direction: column;
+      gap: var(--gap);
+      margin-top: auto;
+      padding-top: 8px;
+    }
+
+    .triage-btn {
+      min-height: var(--min-touch);
+      width: 100%;
+      background-color: var(--surface-elevated);
+      color: var(--text-primary);
+      border: 3px solid #ffffff;
+      border-radius: 12px;
+      padding: 14px 18px;
+      font-size: 1.2rem;
+      font-weight: 900;
+      text-align: left;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      transition: transform 0.06s ease, background-color 0.1s ease;
+    }
+
+    .triage-btn:active {
+      transform: scale(0.98);
+      background-color: #292929;
+    }
+
+    .triage-btn.primary-danger {
+      border-color: var(--cat-a);
+      background-color: var(--cat-a-bg);
+    }
+
+    .triage-btn.action-confirm {
+      border-color: var(--cat-c);
+      background-color: var(--cat-c-bg);
+      justify-content: center;
+      text-align: center;
+    }
+
+    /* 3. PERSISTENT BOTTOM CONTROL BAR */
+    .bottom-dock {
+      background-color: var(--surface);
+      border-top: 3px solid var(--border-muted);
+      padding: 10px 12px;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      position: sticky;
+      bottom: 0;
+      z-index: 20;
+    }
+
+    .dock-btn {
+      min-height: 60px;
+      border-radius: 10px;
+      border: 2px solid #555;
+      background-color: var(--surface-elevated);
+      color: var(--text-primary);
+      font-weight: 900;
+      font-size: 0.86rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      cursor: pointer;
+      text-transform: uppercase;
+    }
+
+    .dock-btn.vitals-btn {
+      border-color: var(--cyan-voice);
+      color: var(--cyan-voice);
+    }
+
+    .dock-btn.mist-btn {
+      border-color: var(--cat-b);
+      color: var(--cat-b);
+    }
+
+    /* 4. SLIDE-UP DRAWERS & INTERRUPT MODALS */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background-color: rgba(0, 0, 0, 0.92);
+      display: none;
+      justify-content: center;
+      align-items: flex-end;
+      z-index: 50;
+    }
+
+    .modal-backdrop.active {
+      display: flex;
+    }
+
+    .drawer-sheet {
+      width: 100%;
+      max-width: 500px;
+      max-height: 92vh;
+      overflow-y: auto;
+      background-color: var(--bg-oled);
+      border-top: 4px solid var(--cyan-voice);
+      border-left: 2px solid var(--border-muted);
+      border-right: 2px solid var(--border-muted);
+      border-radius: 16px 16px 0 0;
+      padding: 18px 14px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .drawer-sheet.critical-modal {
+      border-top: 6px solid var(--cat-a);
+      align-self: center;
+      border-bottom: 6px solid var(--cat-a);
+      border-radius: 14px;
+      margin: 14px;
+    }
+
+    .drawer-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 2px solid #262626;
+      padding-bottom: 10px;
+    }
+
+    .drawer-title {
+      font-size: 1.3rem;
+      font-weight: 900;
+      letter-spacing: 0.02em;
+    }
+
+    .close-btn {
+      background: #222;
+      color: #fff;
+      border: 2px solid #555;
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    /* Tap-to-Count Sensor Button */
+    .tap-sensor-btn {
+      min-height: 78px;
+      background-color: var(--cyan-bg);
+      border: 3px dashed var(--cyan-voice);
+      border-radius: 12px;
+      color: var(--cyan-voice);
+      font-size: 1.1rem;
+      font-weight: 900;
+      padding: 12px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+
+    .tap-sensor-btn:active {
+      background-color: var(--cyan-voice);
+      color: #000;
+    }
+
+    /* Keypad-Free Coarse Steppers */
+    .vital-control-row {
+      background-color: var(--surface);
+      border: 2px solid #2d2d2d;
+      border-radius: 10px;
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .vital-label-bar {
+      display: flex;
+      justify-content: space-between;
+      font-weight: 800;
+      font-size: 0.95rem;
+      color: var(--text-secondary);
+    }
+
+    .vital-val-readout {
+      font-family: var(--font-mono);
+      font-size: 1.3rem;
+      font-weight: 900;
+      color: var(--text-primary);
+    }
+
+    .stepper-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+
+    .step-btn {
+      min-height: 54px;
+      background-color: var(--surface-elevated);
+      border: 2px solid #555;
+      border-radius: 8px;
+      color: #fff;
+      font-family: var(--font-mono);
+      font-size: 1.1rem;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .step-btn:active {
+      background-color: #383838;
+    }
+
+    .avpu-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+
+    .avpu-btn {
+      min-height: 58px;
+      background-color: var(--surface-elevated);
+      border: 2px solid #444;
+      border-radius: 8px;
+      color: var(--text-secondary);
+      font-weight: 900;
+      font-size: 0.95rem;
+      cursor: pointer;
+    }
+
+    .avpu-btn.selected {
+      border-color: var(--cyan-voice);
+      background-color: var(--cyan-bg);
+      color: #ffffff;
+    }
+
+    /* Alert Cards inside Interrupt Modal */
+    .alert-card {
+      padding: 12px;
+      border-radius: 10px;
+      border: 3px solid var(--cat-a);
+      background-color: var(--cat-a-bg);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .alert-card.WARN {
+      border-color: var(--cat-b);
+      background-color: var(--cat-b-bg);
+    }
+
+    .alert-card.INFO {
+      border-color: var(--cat-c);
+      background-color: var(--cat-c-bg);
+    }
+
+    .alert-code {
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .mist-box {
+      background-color: #080808;
+      border: 3px solid var(--cat-b);
+      border-radius: 10px;
+      padding: 16px;
+      font-family: var(--font-mono);
+      font-size: 1.25rem;
+      font-weight: 900;
+      line-height: 1.4;
+      word-break: break-all;
+      color: var(--cat-b);
+    }
+  </style>
+</head>
+<body>
+
+<div class="app-shell">
+  <!-- 1. PERSISTENT TOP TELEMETRY HUD -->
+  <header class="telemetry-hud">
+    <div id="hudPriorityPill" class="hud-pill hud-cat-c">
+      <span>PRI:</span>
+      <span id="hudPriorityText">CAT C</span>
+    </div>
+    <div id="hudShockPill" class="hud-pill hud-cat-c">
+      <span>SI:</span>
+      <span id="hudShockText">0.75 OK</span>
+    </div>
+    <div class="hud-row-bottom">
+      <div id="hudTqBox" class="tq-timer-box">
+        <span id="hudTqLabel">TQ: NONE ACTIVE</span>
+        <span id="hudTqClock">--:--:--</span>
+      </div>
+      <button id="sim2hBtn" class="hud-mini-btn" title="Fast-forward Tourniquet +125m & simulate shock" onclick="simulate2HourShockScenario()">
+        +2H SIM
+      </button>
+      <button id="ttsToggleBtn" class="hud-mini-btn" onclick="toggleTTS()">
+        TTS: ON
+      </button>
+    </div>
+  </header>
+
+  <!-- 2. ZERO-SCROLL DETERMINISTIC TRIAGE VIEWPORT -->
+  <main class="triage-viewport">
+    <div class="node-header-bar">
+      <span id="nodeIdBadge">NODE: BLEED_DETECT</span>
+      <label>
+        SITE:
+        <select id="siteSelect" class="site-selector">
+          <option value="R-THIGH">R-THIGH</option>
+          <option value="L-THIGH">L-THIGH</option>
+          <option value="R-ARM">R-ARM</option>
+          <option value="L-ARM">L-ARM</option>
+          <option value="GROIN">GROIN</option>
+          <option value="CHEST">CHEST</option>
+        </select>
+      </label>
+    </div>
+
+    <!-- Dynamic Warning Banner -->
+    <div id="warningBanner" class="warning-banner" style="display: none;"></div>
+
+    <!-- Dynamic Decision Question -->
+    <h1 id="questionHeader" class="triage-question"></h1>
+
+    <!-- Dynamic Stepwise Imperative Instructions -->
+    <ol id="instructionList" class="instruction-list"></ol>
+
+    <!-- Built-In 3:00 Direct Pressure Countdown (Shown for wound packing) -->
+    <div id="pressureTimerBox" class="pressure-timer-card" style="display: none;">
+      <div style="font-weight: 800; font-size: 0.9rem;">UNINTERRUPTED HEMOSTATIC PRESSURE TIMER</div>
+      <div id="pressureClock" class="pressure-time-display">03:00</div>
+      <button class="triage-btn action-confirm" style="min-height: 56px;" onclick="togglePressureCountdown()">
+        START / PAUSE 3:00 PRESSURE TIMER
+      </button>
+    </div>
+
+    <!-- Oversized 72dp Decision Options -->
+    <div id="optionsStack" class="options-stack"></div>
+  </main>
+
+  <!-- 3. PERSISTENT BOTTOM ACTION BAR -->
+  <footer class="bottom-dock">
+    <button class="dock-btn vitals-btn" onclick="openVitalsDrawer()">
+      <span>LOG VITALS</span>
+      <span style="font-size: 0.72rem; opacity: 0.8;">TAP SENSOR</span>
+    </button>
+    <button class="dock-btn mist-btn" onclick="openMistModal()">
+      <span>MIST BEACON</span>
+      <span style="font-size: 0.72rem; opacity: 0.8;">SMS / SATCOM</span>
+    </button>
+    <button class="dock-btn" onclick="resetIncident()">
+      <span>RESTART</span>
+      <span style="font-size: 0.72rem; opacity: 0.8;">NEW TRIAGE</span>
+    </button>
+  </footer>
+</div>
+
+<!-- ====================================================================== -->
+<!-- MODAL 1: KEYPAD-FREE VITALS LOGGER DRAWER                              -->
+<!-- ====================================================================== -->
+<div id="vitalsBackdrop" class="modal-backdrop">
+  <div class="drawer-sheet">
+    <div class="drawer-header">
+      <span class="drawer-title" style="color: var(--cyan-voice);">KEYPAD-FREE VITALS LOGGER</span>
+      <button class="close-btn" onclick="closeVitalsDrawer()">CLOSE</button>
+    </div>
+
+    <!-- Rhythm Tap-to-Count Sensor -->
+    <button class="tap-sensor-btn" onclick="registerPulseTap()">
+      <span>TAP HERE IN RHYTHM WITH PULSE</span>
+      <span id="tapSensorSubtext" style="font-size: 0.85rem; color: #fff;">(Tap 4+ times to auto-calculate Heart Rate BPM)</span>
+    </button>
+
+    <!-- Heart Rate Stepper -->
+    <div class="vital-control-row">
+      <div class="vital-label-bar">
+        <span>HEART RATE (BPM)</span>
+        <span id="hrReadout" class="vital-val-readout">88</span>
+      </div>
+      <div class="stepper-grid">
+        <button class="step-btn" onclick="adjustVital('hr', -10)">-10</button>
+        <button class="step-btn" onclick="adjustVital('hr', -1)">-1</button>
+        <button class="step-btn" onclick="adjustVital('hr', 1)">+1</button>
+        <button class="step-btn" onclick="adjustVital('hr', 10)">+10</button>
+      </div>
+    </div>
+
+    <!-- Systolic BP Stepper -->
+    <div class="vital-control-row">
+      <div class="vital-label-bar">
+        <span>SYSTOLIC BP (mmHg) [Radial Pulse ~80+]</span>
+        <span id="sbpReadout" class="vital-val-readout">118</span>
+      </div>
+      <div class="stepper-grid">
+        <button class="step-btn" onclick="adjustVital('sbp', -10)">-10</button>
+        <button class="step-btn" onclick="adjustVital('sbp', -2)">-2</button>
+        <button class="step-btn" onclick="adjustVital('sbp', 2)">+2</button>
+        <button class="step-btn" onclick="adjustVital('sbp', 10)">+10</button>
+      </div>
+    </div>
+
+    <!-- Respiratory Rate Stepper -->
+    <div class="vital-control-row">
+      <div class="vital-label-bar">
+        <span>RESPIRATORY RATE (Breaths/Min)</span>
+        <span id="rrReadout" class="vital-val-readout">18</span>
+      </div>
+      <div class="stepper-grid">
+        <button class="step-btn" onclick="adjustVital('rr', -5)">-5</button>
+        <button class="step-btn" onclick="adjustVital('rr', -1)">-1</button>
+        <button class="step-btn" onclick="adjustVital('rr', 1)">+1</button>
+        <button class="step-btn" onclick="adjustVital('rr', 5)">+5</button>
+      </div>
+    </div>
+
+    <!-- Capillary Refill Stepper -->
+    <div class="vital-control-row">
+      <div class="vital-label-bar">
+        <span>CAPILLARY REFILL (Seconds)</span>
+        <span id="capReadout" class="vital-val-readout">2.0s</span>
+      </div>
+      <div class="stepper-grid">
+        <button class="step-btn" onclick="adjustVital('cap', -1.0)">-1.0</button>
+        <button class="step-btn" onclick="adjustVital('cap', -0.5)">-0.5</button>
+        <button class="step-btn" onclick="adjustVital('cap', 0.5)">+0.5</button>
+        <button class="step-btn" onclick="adjustVital('cap', 1.0)">+1.0</button>
+      </div>
+    </div>
+
+    <!-- 4-Button Segmented AVPU Selector -->
+    <div class="vital-control-row">
+      <div class="vital-label-bar">
+        <span>MENTAL STATUS (AVPU)</span>
+        <span id="avpuReadout" class="vital-val-readout">A (ALERT)</span>
+      </div>
+      <div class="avpu-grid">
+        <button id="avpu-A" class="avpu-btn selected" onclick="selectAvpu('A')">A<br>Alert</button>
+        <button id="avpu-V" class="avpu-btn" onclick="selectAvpu('V')">V<br>Voice</button>
+        <button id="avpu-P" class="avpu-btn" onclick="selectAvpu('P')">P<br>Pain</button>
+        <button id="avpu-U" class="avpu-btn" onclick="selectAvpu('U')">U<br>Unresp</button>
+      </div>
+    </div>
+
+    <button class="triage-btn action-confirm" onclick="commitVitalsAndEvaluate()">
+      SAVE VITALS &amp; RUN SHOCK MONITOR
+    </button>
+  </div>
+</div>
+
+<!-- ====================================================================== -->
+<!-- MODAL 2: PREEMPTIVE CLINICAL INTERRUPT & PFC LOCK MODAL                -->
+<!-- ====================================================================== -->
+<div id="interruptBackdrop" class="modal-backdrop">
+  <div class="drawer-sheet critical-modal">
+    <div class="drawer-header">
+      <span class="drawer-title" style="color: var(--cat-a);">CLINICAL MONITOR INTERRUPT</span>
+      <button class="close-btn" onclick="closeInterruptModal()">ACKNOWLEDGE</button>
+    </div>
+    <div id="alertsContainer" style="display: flex; flex-direction: column; gap: 12px;"></div>
+    <button class="triage-btn primary-danger" style="justify-content: center;" onclick="closeInterruptModal()">
+      CONFIRM &amp; MAINTAIN PROTOCOL
+    </button>
+  </div>
+</div>
+
+<!-- ====================================================================== -->
+<!-- MODAL 3: ONE-TAP MIST SATELLITE / SMS BEACON                           -->
+<!-- ====================================================================== -->
+<div id="mistBackdrop" class="modal-backdrop">
+  <div class="drawer-sheet">
+    <div class="drawer-header">
+      <span class="drawer-title" style="color: var(--cat-b);">LOW-BANDWIDTH MIST BEACON</span>
+      <button class="close-btn" onclick="closeMistModal()">CLOSE</button>
+    </div>
+    <p style="font-size: 0.92rem; color: var(--text-secondary);">
+      Formatted under 160 characters for Garmin inReach, Iridium burst, or VHF radio readout:
+    </p>
+    <div id="mistPayloadBox" class="mist-box"></div>
+    <div id="mistCharCount" style="font-family: var(--font-mono); font-size: 0.85rem; color: var(--cat-c);"></div>
+    <button class="triage-btn action-confirm" onclick="copyMistPacket()">
+      COPY PACKET TO CLIPBOARD
+    </button>
+    <a id="smsDispatchLink" href="#" class="triage-btn" style="text-decoration: none; justify-content: center; border-color: var(--cat-b);">
+      OPEN NATIVE SMS DISPATCHER
+    </a>
+  </div>
+</div>
+
+<script>
+  // ==========================================================================
+  // 1. DETERMINISTIC HEMORRHAGE PROTOCOL GRAPH (MATCHES PYTHON BACKEND)
+  // ==========================================================================
+  const PROTOCOL_NODES = {
+    BLEED_DETECT: {
+      question: "Where is the severe bleeding coming from?",
+      options: [
+        { label: "Arm or Leg (Extremity)", next_node: "EXTREMITY_BLEED_TYPE", danger: true },
+        { label: "Groin, Armpit, or Neck (Junctional)", next_node: "JUNCTIONAL_PACKING", danger: true },
+        { label: "Torso, Chest, or Abdomen", next_node: "TORSO_PRESSURE", danger: false }
+      ]
+    },
+    EXTREMITY_BLEED_TYPE: {
+      question: "Is blood spurting, pooling rapidly, or soaking through clothing?",
+      options: [
+        { label: "YES — Arterial / Spurting", next_node: "CHECK_COMMERCIAL_TQ", danger: true },
+        { label: "NO — Steadily Oozing", next_node: "DIRECT_PRESSURE_ONLY", danger: false }
+      ]
+    },
+    CHECK_COMMERCIAL_TQ: {
+      question: "Do you have a dedicated medical tourniquet (CAT, SOFTT, SAM XT)?",
+      options: [
+        { label: "YES — Commercial Tourniquet", next_node: "COMMERCIAL_TQ_ACTION", danger: false },
+        { label: "NO — Improvise with Cloth & Stick", next_node: "IMPROVISED_TQ_ACTION", danger: true }
+      ]
+    },
+    COMMERCIAL_TQ_ACTION: {
+      priority: "CAT_A",
+      intervention_type: "TOURNIQUET",
+      reassessment_interval_minutes: 15,
+      instructions: [
+        "Place strap 2–3 inches above wound (NEVER over a joint; go high and tight if unsure).",
+        "Pull strap completely tight before twisting the windlass rod.",
+        "Twist windlass until bright red bleeding STOPS and distal pulse disappears.",
+        "Lock rod in clip and tap 'LOCK TOURNIQUET TIMER' below."
+      ],
+      options: [
+        { label: "LOCK TOURNIQUET & START TIMER", next_node: "MONITOR_TQ", action_confirm: true }
+      ]
+    },
+    IMPROVISED_TQ_ACTION: {
+      priority: "CAT_A",
+      intervention_type: "TOURNIQUET",
+      reassessment_interval_minutes: 15,
+      critical_warning: "NEVER use zip-ties, wire, paracord, or shoelaces. Use fabric at least 2 inches wide.",
+      instructions: [
+        "Wrap wide cloth (2+ inches wide) 2–3 inches above wound and tie a half-knot.",
+        "Place a rigid stick, thick tent stake, or carabiner on top of the half-knot.",
+        "Tie a full square knot firmly over the stick.",
+        "Twist stick repeatedly until bright red bleeding STOPS completely.",
+        "Tie loose cloth ends around the stick to lock it and write 'TQ' + time on forehead."
+      ],
+      options: [
+        { label: "LOCK IMPROVISED TQ & START TIMER", next_node: "MONITOR_TQ", action_confirm: true }
+      ]
+    },
+    JUNCTIONAL_PACKING: {
+      priority: "CAT_A",
+      intervention_type: "PRESSURE_DRESSING",
+      reassessment_interval_minutes: 15,
+      requires_pressure_timer: true,
+      critical_warning: "DO NOT apply a tourniquet to the neck, armpit, or groin.",
+      instructions: [
+        "Expose deep wound cavity and wipe away loose surface clots.",
+        "Feed gauze or clean cotton cloth tightly into the deepest point of the bleeding vessel.",
+        "Pack cavity completely full, then lean full body weight onto wound for 3 full minutes."
+      ],
+      options: [
+        { label: "PACKING COMPLETE — MONITOR PATIENT", next_node: "MONITOR_DRESSING", action_confirm: true }
+      ]
+    },
+    TORSO_PRESSURE: {
+      priority: "CAT_A",
+      intervention_type: "PRESSURE_DRESSING",
+      reassessment_interval_minutes: 15,
+      critical_warning: "Do NOT pack deep chest or abdominal cavities (internal organs give way).",
+      instructions: [
+        "If chest wound is bubbling or sucking, seal with plastic taped on 3 sides.",
+        "Apply firm surface pressure over abdominal wounds with clean dry cloth.",
+        "Wrap patient immediately in a full hypothermia wrap (sleeping pad + dry insulation)."
+      ],
+      options: [
+        { label: "SEALED & WARMED — MONITOR VITALS", next_node: "MONITOR_DRESSING", action_confirm: true }
+      ]
+    },
+    DIRECT_PRESSURE_ONLY: {
+      priority: "CAT_B",
+      intervention_type: "PRESSURE_DRESSING",
+      reassessment_interval_minutes: 30,
+      instructions: [
+        "Place folded clean cloth pad directly over wound and press firmly with both hands.",
+        "Tie snugly with bandana or elastic wrap; verify fingers/toes remain warm and pink."
+      ],
+      options: [
+        { label: "DRESSING SECURED — MONITOR", next_node: "MONITOR_DRESSING", action_confirm: true }
+      ]
+    },
+    MONITOR_TQ: {
+      priority: "CAT_A",
+      question: "Active Tourniquet Monitoring Loop (Check Every 15 Min)",
+      instructions: [
+        "Inspect wound for renewed bleeding or windlass loosening.",
+        "If bleeding persists, apply a 2nd tourniquet 2 inches above the first.",
+        "Log patient vitals every 15 minutes using the bottom 'LOG VITALS' button.",
+        "At 120 minutes, the system will evaluate eligibility for PFC Tourniquet Conversion."
+      ],
+      options: [
+        { label: "BLEEDING RESUMED — ADD 2ND TQ", next_node: "CHECK_COMMERCIAL_TQ", danger: true }
+      ]
+    },
+    MONITOR_DRESSING: {
+      priority: "CAT_B",
+      question: "Active Pressure Dressing & Hypothermia Monitoring",
+      instructions: [
+        "Check dressing every 15–30 minutes for blood soaking through.",
+        "Check capillary refill and distal pulse below the bandage.",
+        "Log vitals every 15 minutes to catch early internal decompensation."
+      ],
+      options: [
+        { label: "SEVERE BLEEDING STARTED", next_node: "BLEED_DETECT", danger: true }
+      ]
+    }
+  };
+
+  // ==========================================================================
+  // 2. APPLICATION STATE & OFFLINE PERSISTENCE
+  // ==========================================================================
+  let appState = {
+    incidentId: "INC-" + Math.random().toString(16).substring(2, 8).toUpperCase(),
+    mechanism: "4M-ROCK-FALL",
+    evacCategory: "CAT_C",
+    currentNodeId: "BLEED_DETECT",
+    ttsEnabled: true,
+    vitalsHistory: [
+      { timestamp: Date.now() - 300000, hr: 88, sbp: 118, rr: 18, avpu: "A", cap: 2.0 }
+    ],
+    activeTimers: [], // { type: 'TOURNIQUET', site: 'R-THIGH', appliedAtMs: number, nextCheckMs: number }
+    draftVitals: { hr: 88, sbp: 118, rr: 18, avpu: "A", cap: 2.0 }
+  };
+
+  // Load saved state if available
+  try {
+    const saved = localStorage.getItem("AURA_OFFLINE_STATE_V1");
+    if (saved) {
+      appState = JSON.parse(saved);
+    }
+  } catch (e) {
+    console.warn("LocalStorage unavailable, running in-memory.");
+  }
+
+  function persistState() {
+    try {
+      localStorage.setItem("AURA_OFFLINE_STATE_V1", JSON.stringify(appState));
+    } catch (e) {}
+  }
+
+  // ==========================================================================
+  // 3. WEB AUDIO SYNTHESIZER & OFFLINE TTS VOICE ENGINE
+  // ==========================================================================
+  let audioCtx = null;
+  function playTone(freq = 880, durationMs = 180, type = "square") {
+    try {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+      gain.gain.setValueAtTime(0.18, audioCtx.currentTime);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + durationMs / 1000);
+    } catch (e) {}
+  }
+
+  function triggerEmergencyHardwareAlert(speechText) {
+    playTone(960, 220, "sawtooth");
+    setTimeout(() => playTone(640, 280, "sawtooth"), 250);
+    if (navigator.vibrate) {
+      navigator.vibrate([500, 200, 500, 200, 500]);
+    }
+    speakText(speechText);
+  }
+
+  function speakText(text) {
+    if (!appState.ttsEnabled || !("speechSynthesis" in window)) return;
+    try {
+      window.speechSynthesis.cancel();
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.rate = 1.05;
+      window.speechSynthesis.speak(utter);
+    } catch (e) {}
+  }
+
+  function toggleTTS() {
+    appState.ttsEnabled = !appState.ttsEnabled;
+    const btn = document.getElementById("ttsToggleBtn");
+    btn.textContent = appState.ttsEnabled ? "TTS: ON" : "TTS: OFF";
+    btn.classList.toggle("off", !appState.ttsEnabled);
+    if (!appState.ttsEnabled && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+    }
+    persistState();
+  }
+
+  // ==========================================================================
+  // 4. DETERMINISTIC TRIAGE RENDERER & STATE TRANSITIONS
+  // ==========================================================================
+  function renderCurrentNode() {
+    const node = PROTOCOL_NODES[appState.currentNodeId];
+    document.getElementById("nodeIdBadge").textContent = "NODE: " + appState.currentNodeId;
+
+    // Warning Banner
+    const warnEl = document.getElementById("warningBanner");
+    if (node.critical_warning) {
+      warnEl.style.display = "block";
+      warnEl.textContent = "WARNING: " + node.critical_warning;
+    } else {
+      warnEl.style.display = "none";
+    }
+
+    // Question Header
+    const qEl = document.getElementById("questionHeader");
+    if (node.question) {
+      qEl.style.display = "block";
+      qEl.textContent = node.question;
+    } else {
+      qEl.style.display = "none";
+    }
+
+    // Stepwise Instructions
+    const listEl = document.getElementById("instructionList");
+    listEl.innerHTML = "";
+    if (node.instructions && node.instructions.length > 0) {
+      node.instructions.forEach((step, idx) => {
+        const li = document.createElement("li");
+        li.className = "instruction-item";
+        li.innerHTML = `<span class="step-num">${idx + 1}</span><span>${step}</span>`;
+        listEl.appendChild(li);
+      });
+    }
+
+    // 3:00 Direct Pressure Timer Box
+    const pBox = document.getElementById("pressureTimerBox");
+    pBox.style.display = node.requires_pressure_timer ? "flex" : "none";
+
+    // Render 72dp Options
+    const stackEl = document.getElementById("optionsStack");
+    stackEl.innerHTML = "";
+    (node.options || []).forEach((opt) => {
+      const btn = document.createElement("button");
+      btn.className = "triage-btn";
+      if (opt.danger) btn.classList.add("primary-danger");
+      if (opt.action_confirm) btn.classList.add("action-confirm");
+      btn.innerHTML = `<span>${opt.label}</span><span>&rarr;</span>`;
+      btn.onclick = () => selectNodeOption(opt.next_node, node);
+      stackEl.appendChild(btn);
+    });
+
+    // Speak node prompt aloud
+    const spokenSummary = [
+      node.critical_warning ? "Warning: " + node.critical_warning : "",
+      node.question || "",
+      ...(node.instructions || [])
+    ].filter(Boolean).join(". ");
+    speakText(spokenSummary);
+
+    updateTelemetryHud();
+  }
+
+  function selectNodeOption(nextNodeId, currentNode) {
+    playTone(520, 60, "sine");
+    const site = document.getElementById("siteSelect").value;
+
+    // If confirming an intervention node, register active hardware timer
+    if (currentNode.intervention_type && currentNode.reassessment_interval_minutes) {
+      const now = Date.now();
+      appState.activeTimers.push({
+        type: currentNode.intervention_type,
+        site: site,
+        appliedAtMs: now,
+        nextCheckMs: now + currentNode.reassessment_interval_minutes * 60000
+      });
+    }
+
+    const targetNode = PROTOCOL_NODES[nextNodeId];
+    if (targetNode && targetNode.priority) {
+      appState.evacCategory = targetNode.priority;
+    }
+
+    appState.currentNodeId = nextNodeId;
+    persistState();
+    renderCurrentNode();
+  }
+
+  // ==========================================================================
+  // 5. LIVE TELEMETRY HUD & 3:00 HEMOSTATIC PRESSURE TIMER
+  // ==========================================================================
+  function formatDuration(ms) {
+    const totalSec = Math.max(0, Math.floor(ms / 1000));
+    const hrs = String(Math.floor(totalSec / 3600)).padStart(2, "0");
+    const mins = String(Math.floor((totalSec % 3600) / 60)).padStart(2, "0");
+    const secs = String(totalSec % 60).padStart(2, "0");
+    return `${hrs}:${mins}:${secs}`;
+  }
+
+  function updateTelemetryHud() {
+    // 1. Evacuation Priority Pill
+    const priPill = document.getElementById("hudPriorityPill");
+    const priText = document.getElementById("hudPriorityText");
+    priPill.className = "hud-pill";
+    if (appState.evacCategory === "CAT_A") {
+      priPill.classList.add("hud-cat-a");
+      priText.textContent = "CAT A (IMM)";
+    } else if (appState.evacCategory === "CAT_B") {
+      priPill.classList.add("hud-cat-b");
+      priText.textContent = "CAT B (URG)";
+    } else {
+      priPill.classList.add("hud-cat-c");
+      priText.textContent = "CAT C (RTN)";
+    }
+
+    // 2. Shock Index Pill
+    const latest = appState.vitalsHistory[appState.vitalsHistory.length - 1];
+    const si = latest ? +(latest.hr / latest.sbp).toFixed(2) : 0.75;
+    const shockPill = document.getElementById("hudShockPill");
+    const shockText = document.getElementById("hudShockText");
+    shockPill.className = "hud-pill";
+
+    if (si > 0.9 || (latest && latest.sbp < 100)) {
+      shockPill.classList.add("hud-cat-a", "shock-flash");
+      shockText.textContent = `${si.toFixed(2)} SHOCK`;
+    } else if (si >= 0.8) {
+      shockPill.classList.add("hud-cat-b");
+      shockText.textContent = `${si.toFixed(2)} WATCH`;
+    } else {
+      shockPill.classList.add("hud-cat-c");
+      shockText.textContent = `${si.toFixed(2)} STABLE`;
+    }
+
+    // 3. Active Tourniquet / Intervention Clock
+    const tqBox = document.getElementById("hudTqBox");
+    const tqLabel = document.getElementById("hudTqLabel");
+    const tqClock = document.getElementById("hudTqClock");
+    const tq = appState.activeTimers.find((t) => t.type === "TOURNIQUET") || appState.activeTimers[0];
+
+    if (tq) {
+      const elapsed = Date.now() - tq.appliedAtMs;
+      tqBox.classList.add("tq-active");
+      tqLabel.textContent = `${tq.type === "TOURNIQUET" ? "TQ" : "DRESS"} @ ${tq.site}`;
+      tqClock.textContent = formatDuration(elapsed);
+    } else {
+      tqBox.classList.remove("tq-active");
+      tqLabel.textContent = "TQ: NONE ACTIVE";
+      tqClock.textContent = "--:--:--";
+    }
+  }
+
+  setInterval(updateTelemetryHud, 1000);
+
+  // 3:00 Direct Pressure Packing Countdown
+  let pressureRemainingSec = 180;
+  let pressureInterval = null;
+  function togglePressureCountdown() {
+    if (pressureInterval) {
+      clearInterval(pressureInterval);
+      pressureInterval = null;
+      return;
+    }
+    playTone(660, 120, "sine");
+    pressureInterval = setInterval(() => {
+      pressureRemainingSec--;
+      const m = String(Math.floor(pressureRemainingSec / 60)).padStart(2, "0");
+      const s = String(pressureRemainingSec % 60).padStart(2, "0");
+      document.getElementById("pressureClock").textContent = `${m}:${s}`;
+      if (pressureRemainingSec % 30 === 0 && pressureRemainingSec > 0) {
+        playTone(540, 100, "sine");
+      }
+      if (pressureRemainingSec <= 0) {
+        clearInterval(pressureInterval);
+        pressureInterval = null;
+        pressureRemainingSec = 180;
+        triggerEmergencyHardwareAlert("Three minute direct pressure complete. Inspect wound for hemostasis.");
+      }
+    }, 1000);
+  }
+
+  // ==========================================================================
+  // 6. KEYPAD-FREE VITALS DRAWER & RHYTHM TAP SENSOR
+  // ==========================================================================
+  let pulseTapTimes = [];
+
+  function openVitalsDrawer() {
+    const latest = appState.vitalsHistory[appState.vitalsHistory.length - 1];
+    if (latest) {
+      appState.draftVitals = { ...latest };
+    }
+    syncDraftVitalsUI();
+    document.getElementById("vitalsBackdrop").classList.add("active");
+  }
+
+  function closeVitalsDrawer() {
+    document.getElementById("vitalsBackdrop").classList.remove("active");
+  }
+
+  function registerPulseTap() {
+    const now = Date.now();
+    playTone(700, 40, "sine");
+    pulseTapTimes = pulseTapTimes.filter((t) => now - t < 10000);
+    pulseTapTimes.push(now);
+
+    if (pulseTapTimes.length >= 3) {
+      let totalIntervals = 0;
+      for (let i = 1; i < pulseTapTimes.length; i++) {
+        totalIntervals += pulseTapTimes[i] - pulseTapTimes[i - 1];
+      }
+      const avgMs = totalIntervals / (pulseTapTimes.length - 1);
+      const computedBpm = Math.min(240, Math.max(30, Math.round(60000 / avgMs)));
+      appState.draftVitals.hr = computedBpm;
+      document.getElementById("tapSensorSubtext").textContent = `Measured: ${computedBpm} BPM (${pulseTapTimes.length} taps)`;
+      syncDraftVitalsUI();
+    } else {
+      document.getElementById("tapSensorSubtext").textContent = `Keep tapping... (${pulseTapTimes.length}/3 taps)`;
+    }
+  }
+
+  function adjustVital(field, delta) {
+    playTone(440, 35, "sine");
+    if (field === "hr") {
+      appState.draftVitals.hr = Math.min(240, Math.max(20, appState.draftVitals.hr + delta));
+    } else if (field === "sbp") {
+      appState.draftVitals.sbp = Math.min(240, Math.max(40, appState.draftVitals.sbp + delta));
+    } else if (field === "rr") {
+      appState.draftVitals.rr = Math.min(60, Math.max(4, appState.draftVitals.rr + delta));
+    } else if (field === "cap") {
+      appState.draftVitals.cap = Math.min(10, Math.max(0.5, +(appState.draftVitals.cap + delta).toFixed(1)));
+    }
+    syncDraftVitalsUI();
+  }
+
+  function selectAvpu(state) {
+    playTone(480, 35, "sine");
+    appState.draftVitals.avpu = state;
+    syncDraftVitalsUI();
+  }
+
+  function syncDraftVitalsUI() {
+    const d = appState.draftVitals;
+    document.getElementById("hrReadout").textContent = d.hr;
+    document.getElementById("sbpReadout").textContent = d.sbp;
+    document.getElementById("rrReadout").textContent = d.rr;
+    document.getElementById("capReadout").textContent = d.cap.toFixed(1) + "s";
+    const labels = { A: "A (ALERT)", V: "V (VOICE)", P: "P (PAIN)", U: "U (UNRESP)" };
+    document.getElementById("avpuReadout").textContent = labels[d.avpu];
+    ["A", "V", "P", "U"].forEach((code) => {
+      document.getElementById("avpu-" + code).classList.toggle("selected", d.avpu === code);
+    });
+  }
+
+  // ==========================================================================
+  // 7. SHOCK INDEX & PFC TOURNIQUET CONVERSION DAEMON (MATCHES PYTHON LOGIC)
+  // ==========================================================================
+  function commitVitalsAndEvaluate() {
+    const entry = {
+      timestamp: Date.now(),
+      hr: appState.draftVitals.hr,
+      sbp: appState.draftVitals.sbp,
+      rr: appState.draftVitals.rr,
+      avpu: appState.draftVitals.avpu,
+      cap: appState.draftVitals.cap
+    };
+    appState.vitalsHistory.push(entry);
+    closeVitalsDrawer();
+    evaluatePatientTrendsAndAlert();
+    persistState();
+    updateTelemetryHud();
+  }
+
+  function evaluatePatientTrendsAndAlert() {
+    const history = appState.vitalsHistory;
+    if (!history.length) return;
+
+    const latest = history[history.length - 1];
+    const prev = history.length >= 2 ? history[history.length - 2] : null;
+    const si = +(latest.hr / latest.sbp).toFixed(2);
+    const alerts = [];
+
+    let inShock = false;
+    if (si > 0.9 || latest.sbp < 100) {
+      inShock = true;
+      appState.evacCategory = "CAT_A";
+      alerts.push({
+        severity: "CRITICAL",
+        code: "SHOCK_INDEX_HIGH",
+        message: `Shock Index is ${si} (HR ${latest.hr} / SBP ${latest.sbp} mmHg). Decompensated hemorrhagic shock risk! Inspect tourniquets for seepage, apply a 2nd proximal tourniquet if needed, and seal patient in hypothermia wrap.`
+      });
+    }
+
+    if (prev && latest.hr - prev.hr >= 20) {
+      alerts.push({
+        severity: "WARN",
+        code: "HR_TREND_SPIKE",
+        message: `Heart rate jumped +${latest.hr - prev.hr} BPM since last check (${prev.hr} to ${latest.hr} BPM). Early sign of occult volume loss.`
+      });
+    }
+
+    if (latest.rr < 8 || latest.rr > 30) {
+      alerts.push({
+        severity: "CRITICAL",
+        code: "RESP_DISTRESS",
+        message: `Respiratory rate ${latest.rr} BPM is outside safe bounds (8–30). Check airway and chest wall.`
+      });
+    }
+
+    if (latest.avpu === "P" || latest.avpu === "U") {
+      alerts.push({
+        severity: "CRITICAL",
+        code: "NEURO_DECLINE",
+        message: `AVPU status declined to '${latest.avpu}'. Protect airway immediately; place in recovery position if spine is clear.`
+      });
+    }
+
+    if (latest.cap > 3.0) {
+      alerts.push({
+        severity: "WARN",
+        code: "DELAYED_PERFUSION",
+        message: `Capillary refill is ${latest.cap.toFixed(1)}s (above 3.0s). Indicates peripheral vasoconstriction, hypothermia, or shock.`
+      });
+    }
+
+    // Prolonged Field Care (PFC) Tourniquet Conversion Check
+    const now = Date.now();
+    appState.activeTimers.forEach((tmr) => {
+      const elapsedMin = Math.floor((now - tmr.appliedAtMs) / 60000);
+      if (tmr.type === "TOURNIQUET" && elapsedMin >= 120) {
+        if (elapsedMin > 360) {
+          alerts.push({
+            severity: "CRITICAL",
+            code: "TQ_DO_NOT_REMOVE_6HR",
+            message: `Tourniquet on ${tmr.site} has been applied for ${elapsedMin} min (over 6 hours). DO NOT loosen in the field.`
+          });
+        } else if (inShock) {
+          alerts.push({
+            severity: "CRITICAL",
+            code: "TQ_CONVERSION_CONTRAINDICATED",
+            message: `Tourniquet on ${tmr.site} reached ${elapsedMin} min (past 2-hour PFC window), but conversion is CONTRAINDICATED because patient is in active SHOCK. Leave tourniquet locked!`
+          });
+        } else {
+          alerts.push({
+            severity: "INFO",
+            code: "TQ_CONVERSION_ELIGIBLE",
+            message: `Tourniquet on ${tmr.site} at ${elapsedMin} min: Patient is hemodynamically stable. Eligible to attempt Plus-1 Tourniquet & Pressure Dressing conversion.`
+          });
+        }
+      }
+    });
+
+    if (alerts.length > 0) {
+      showInterruptModal(alerts);
+    }
+  }
+
+  function showInterruptModal(alerts) {
+    const container = document.getElementById("alertsContainer");
+    container.innerHTML = "";
+    alerts.forEach((a) => {
+      const div = document.createElement("div");
+      div.className = `alert-card ${a.severity}`;
+      div.innerHTML = `<div class="alert-code">[${a.severity}] ${a.code}</div><div style="font-weight:700; line-height:1.35;">${a.message}</div>`;
+      container.appendChild(div);
+    });
+    document.getElementById("interruptBackdrop").classList.add("active");
+    triggerEmergencyHardwareAlert(alerts[0].message);
+  }
+
+  function closeInterruptModal() {
+    document.getElementById("interruptBackdrop").classList.remove("active");
+  }
+
+  // ==========================================================================
+  // 8. ONE-TAP +2H SHOCK SIMULATION & MIST SATELLITE SERIALIZER
+  // ==========================================================================
+  function simulate2HourShockScenario() {
+    const now = Date.now();
+    // Ensure a tourniquet is registered 125 minutes ago
+    appState.evacCategory = "CAT_A";
+    appState.currentNodeId = "MONITOR_TQ";
+    appState.activeTimers = [
+      {
+        type: "TOURNIQUET",
+        site: "R-THIGH",
+        appliedAtMs: now - 125 * 60000,
+        nextCheckMs: now - 5 * 60000
+      }
+    ];
+    // Log deteriorating vitals matching the Python simulation (HR 118, SBP 96 -> SI 1.23)
+    appState.vitalsHistory.push({
+      timestamp: now,
+      hr: 118,
+      sbp: 96,
+      rr: 24,
+      avpu: "V",
+      cap: 3.8
+    });
+    persistState();
+    renderCurrentNode();
+    evaluatePatientTrendsAndAlert();
+  }
+
+  function buildMistPacket() {
+    const latest = appState.vitalsHistory[appState.vitalsHistory.length - 1];
+    const si = latest ? (latest.hr / latest.sbp).toFixed(2) : "?";
+    const signs = latest
+      ? `HR${latest.hr}-BP${latest.sbp}-SI${si}-RR${latest.rr}-${latest.avpu}`
+      : "NO-VITALS";
+    const tx = appState.activeTimers
+      .map((t) => `${t.type.substring(0, 2)}@${t.site}`)
+      .join(",") || "NONE";
+    const raw = `MIST/${appState.evacCategory}/ID:${appState.incidentId}/M:${appState.mechanism}/S:${signs}/T:${tx}`;
+    return raw.substring(0, 160);
+  }
+
+  function openMistModal() {
+    const packet = buildMistPacket();
+    document.getElementById("mistPayloadBox").textContent = packet;
+    document.getElementById("mistCharCount").textContent = `PAYLOAD SIZE: ${packet.length} / 160 CHARACTERS (SINGLE SMS BURST)`;
+    document.getElementById("smsDispatchLink").href = `sms:?body=${encodeURIComponent(packet)}`;
+    document.getElementById("mistBackdrop").classList.add("active");
+  }
+
+  function closeMistModal() {
+    document.getElementById("mistBackdrop").classList.remove("active");
+  }
+
+  function copyMistPacket() {
+    const packet = buildMistPacket();
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(packet);
+    }
+    playTone(880, 100, "sine");
+    document.getElementById("mistCharCount").textContent = "COPIED TO CLIPBOARD FOR GARMIN INREACH / SATCOM!";
+  }
+
+  function resetIncident() {
+    localStorage.removeItem("AURA_OFFLINE_STATE_V1");
+    location.reload();
+  }
+
+  // Initialize UI on load
+  renderCurrentNode();
+</script>
+</body>
+</html>
